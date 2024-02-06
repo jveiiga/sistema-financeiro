@@ -1,25 +1,42 @@
-Sistema Financeiro
+<h1 align="center">
+  <a>Sistema Financeiro</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</h1>
 
-Diagrama
+# 
+
+<p align="center">
+  <a> Diagrama</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
 
 ![Diagrama sistema financeiro](https://github.com/nikhilkhanke/nk-site-discussion/assets/57195630/a2902673-2d8f-4108-b977-2a7ff40d57ff)
 
-Spring Initializr
+##
 
-Maven
+<p align="center">
+  <a>Projeto</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
 
-Java 17
+- Spring Initializr
 
-Springboot 3.2.2
+- Maven
 
-Packaging Jar
+- Java 17
 
-Dependências 
+- Springboot 3.2.2
 
-Spring Web
+- Packaging Jar
 
-Spring Data JPA
+##  
+<p align="center">
+  <a>Dependências</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
 
-PostgreSQL Driver
+- Spring Web
 
-Validation
+- Spring Data JPA
+
+- PostgreSQL Driver
+
+- Validation
+
+##
