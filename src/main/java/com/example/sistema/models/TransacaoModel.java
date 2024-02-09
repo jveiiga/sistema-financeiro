@@ -55,6 +55,10 @@ public class TransacaoModel {
         this.cliente = cliente;
     }
 
+    public void setEmpresa(EmpresaModel empresa) {
+        this.empresa = empresa;
+    }
+
     public TipoImposto getTipoImposto() {
         return tipoImposto;
     }
