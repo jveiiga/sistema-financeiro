@@ -46,28 +46,38 @@ public class TransacaoController {
         BigDecimal valor = transacaoRecordDto.getValor();
         UUID idCliente = transacaoRecordDto.idCliente();
         UUID idEmpresa = transacaoRecordDto.idEmpresa();
+        // Representa a porcentagem da taxa de imposto aplicada ao saque
+        BigDecimal porcentagem = new BigDecimal("3");
 
         TransacaoModel transacaoModel = new TransacaoModel();
+        // Defini o tipo de imposto da transação e converte a representação de string para o valor correspondente a enumeração
         transacaoModel.setTipoImposto(TipoImposto.fromString(tipoImposto));
+        // Defini o valor da transação com base no valor passado como parâmetro para o método
         transacaoModel.setValor(valor);
 
         if ("DEPOSITO".equals(tipoImposto)) {
             realizarDeposito(idCliente, idEmpresa, valor, transacaoModel);
-
-//            transacaoModel.setMensagem("Depósito realizado com sucesso!");
             transacaoModel.setStatus(StatusTransacao.CONCLUIDA);
         } else if ("SAQUE".equals(tipoImposto)) {
-            BigDecimal taxaImposto = calcularTaxaImposto(valor);
-            realizarSaque(valor.add(taxaImposto), idCliente);
-            descontarImposto(taxaImposto);
-            transacaoModel.setMensagem("Saque realizado com sucesso!");
-            transacaoModel.setStatus(StatusTransacao.CONCLUIDA);
-        } else {
-            transacaoModel.setMensagem("Tipo de transação não suportada");
-            transacaoModel.setStatus(StatusTransacao.FALHA);
-        }
-        transacaoRepository.save(transacaoModel);
+            BigDecimal taxaImposto = calcularTaxaImposto(valor, porcentagem);
 
+            TransacaoModel saqueTransacaoModel = new TransacaoModel();
+            saqueTransacaoModel.setTipoImposto(TipoImposto.fromString(tipoImposto));
+            saqueTransacaoModel.setValor(valor);
+
+            Optional<ClienteModel> clienteO = clienteRepository.findById(idCliente);
+
+            if (clienteO.isPresent()) {
+                ClienteModel cliente = clienteO.get();
+                realizarSaque(cliente, idEmpresa, valor, saqueTransacaoModel);
+                taxaImposto = descontarImposto(taxaImposto);
+                transacaoModel.setMensagem("Saque realizado com sucesso!");
+                transacaoModel.setStatus(StatusTransacao.CONCLUIDA);
+            } else {
+                transacaoModel.setMensagem("Tipo de transação não suportada");
+                transacaoModel.setStatus(StatusTransacao.FALHA);
+            }
+        }
         return transacaoModel;
     }
 
@@ -99,28 +109,59 @@ public class TransacaoController {
         }
     }
 
-    public BigDecimal calcularTaxaImposto(BigDecimal valor) {
-        // Implementação do cálculo da taxa de imposto
-        // Substitua isso com a lógica real do seu cálculo de imposto
-        BigDecimal taxa = valor.multiply(new BigDecimal("0.1")); // Exemplo de uma taxa de 10%
+    public BigDecimal calcularTaxaImposto(BigDecimal valor, BigDecimal porcentagem) {
+        // Cálcula a taxa de imposto
+        BigDecimal taxa = valor.multiply(porcentagem.divide(BigDecimal.valueOf(100)));
 
         return taxa;
     }
 
-    public void descontarImposto(BigDecimal taxaImposto) {
-        // Lógica para descontar o imposto
-        // Substitua isso com a lógica real do seu desconto de imposto
-        BigDecimal porcentagemDesconto = new BigDecimal("0.05"); // Exemplo de desconto de 5%
+    public BigDecimal descontarImposto(BigDecimal taxaImposto) {
+        // Representa a porcentagem de desconto que será aplicada sobre o imposto
+        BigDecimal porcentagemDesconto = new BigDecimal("0.03"); // Desconto de 3%
         BigDecimal desconto = taxaImposto.multiply(porcentagemDesconto);
 
-        // Subtrai o desconto
-        taxaImposto = taxaImposto.subtract(desconto);
+        return taxaImposto.subtract(desconto);
     }
 
-    private void realizarSaque(BigDecimal valor, UUID idCliente) {
+    private void realizarSaque(ClienteModel cliente, UUID idEmpresa, BigDecimal valor, TransacaoModel transacaoModel) {
 
+        UUID idCliente = cliente.getIdCliente();
+        Optional<EmpresaModel> empresaO = empresaRepository.findById(idEmpresa);
+
+        if(empresaO.isPresent()) {
+            EmpresaModel empresa = empresaO.get();
+            if (empresa.getSaldo().compareTo(valor) >= 0) {
+                // Representa a taxa de imposto a ser aplicada
+                BigDecimal taxaImposto = new BigDecimal("3"); // Desconto de 3%
+                BigDecimal taxaDesconto = calcularTaxaImposto(valor, taxaImposto);
+                // Desconta a taxa de imposto da conta da empresa
+                empresa.setSaldo(empresa.getSaldo().subtract(taxaDesconto));
+                // Subtrai o valor total do saque (incluindo a taxa de imposto) da conta da empresa
+                empresa.setSaldo(empresa.getSaldo().subtract(valor));
+                // Transfere o valor para a conta do cliente
+                cliente.setSaldo(cliente.getSaldo().add(valor));
+
+                empresaRepository.save(empresa);
+                clienteRepository.save(cliente);
+
+                transacaoModel.setCliente(cliente);
+                transacaoModel.setEmpresa(empresa);
+
+                transacaoModel.setMensagem("Saque realizado com sucesso!");
+                transacaoModel.setStatus(StatusTransacao.CONCLUIDA);
+                transacaoRepository.save(transacaoModel);
+            } else {
+                transacaoModel.setMensagem("Saldo insuficiente na conta da empresa.");
+                transacaoModel.setStatus(StatusTransacao.FALHA);
+                transacaoRepository.save(transacaoModel);
+            }
+        } else {
+                transacaoModel.setMensagem("Cliente ou empresa não encontrados.");
+                transacaoModel.setStatus(StatusTransacao.FALHA);
+                transacaoRepository.save(transacaoModel);
+        }
     }
-
 
 }
 
